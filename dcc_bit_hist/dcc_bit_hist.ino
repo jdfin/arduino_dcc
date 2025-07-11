@@ -37,7 +37,7 @@ static uint32_t hist_ct = 0;
 // Set to UINT32_MAX to run until any bin fills up.
 // 100,000 half-bits takes about 8 seconds.
 // Until-full takes about 2 minutes.
-static const uint32_t hist_end_ct = UINT32_MAX;
+static const uint32_t hist_end_ct = 200000; //UINT32_MAX;
 
 // PIO timestamp resolution
 static const uint pio_tick_hz = 1'000'000 * tpu;
@@ -100,8 +100,9 @@ void loop()
     if (hist_ct >= hist_end_ct)
         return;
 
+    int rise;
     uint32_t edge_tk;
-    if (!Edges::get_tick(edge_tk))
+    if (!Edges::get_tick(rise, edge_tk))
         return;
 
     // When decoding DCC, we don't care which edge it is, but when looking
@@ -112,11 +113,9 @@ void loop()
     // the slow edge gets its timestamp a tiny bit later. The histogram
     // printout shows this clearly.
 
-    bool is_hi = gpio_get(dcc_gpio);
-
     // Rising edges are adjusted for the slow rise time
     const uint32_t adj_ns = 440;
-    if (is_hi)
+    if (rise == 1)
         edge_tk -= ((tpu * adj_ns + 500) / 1000);
 
     static uint32_t edge_prv_tk = UINT32_MAX;
@@ -127,7 +126,7 @@ void loop()
 
         // hist_lo_ct is low intervals and hist_hi_ct is high intervals
         uint32_t bin_ct;
-        if (is_hi)
+        if (rise == 1)
             bin_ct = ++hist_lo_ct[edge_int_tk]; // rising edge ends a low interval
         else
             bin_ct = ++hist_hi_ct[edge_int_tk]; // falling edge ends a high interval

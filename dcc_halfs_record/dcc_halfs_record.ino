@@ -61,15 +61,14 @@ void loop()
     if (halfs_ct >= halfs_end_ct)
         return;
 
+    int rise;
     uint32_t edge_tk;
-    if (!Edges::get_tick(edge_tk))
+    if (!Edges::get_tick(rise, edge_tk))
         return;
-
-    bool is_hi = gpio_get(dcc_signal_gpio);
 
     // Rising edges are adjusted for the slow rise time
     const uint32_t adj_ns = 440;
-    if (is_hi)
+    if (rise == 1)
         edge_tk -= ((tpu * adj_ns + 500) / 1000);
 
     static uint32_t edge_prv_tk = UINT32_MAX;

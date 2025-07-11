@@ -68,17 +68,16 @@ void loop()
     if (interval_ct >= interval_end_ct)
         return;
 
+    int rise;
     uint32_t tk;
-    if (!Edges::get_tick(tk))
+    if (!Edges::get_tick(rise, tk))
         return;
 
     int32_t edge_tk = int32_t(tk);
 
-    bool is_hi = gpio_get(dcc_gpio);
-
     // Rising edges are adjusted for the slow rise time
     const uint32_t adj_ns = 440;
-    if (is_hi)
+    if (rise == 1)
         edge_tk -= ((tpu * adj_ns + 500) / 1000);
 
     static int32_t edge_prv_tk = INT32_MAX;
@@ -87,7 +86,7 @@ void loop()
 
         int32_t edge_int_tk = edge_tk - edge_prv_tk;
 
-        if (is_hi)
+        if (rise == 1)
             interval_tk[interval_ct] = edge_int_tk; // positive is interval to rising edge
         else
             interval_tk[interval_ct] = -edge_int_tk; // negative is interval to falling edge

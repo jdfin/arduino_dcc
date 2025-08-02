@@ -7,6 +7,28 @@
 #include "dcc_pkt.h"
 #include "dcc_bitstream.h"
 
+// PWM usage:
+//
+// Example: sending 0, 1, 1
+//
+//   |<--------0-------->|<----1---->|<----1---->|
+//
+//   +---------+         +-----+     +-----+     +--
+//   |         |         |     |     |     |     |
+// --+         +---------+     +-----+     +-----+
+//   ^                   ^           ^           ^
+//   A                   B           C           D
+//
+// At edge A, the PWM's CC and TOP registers are already programmed for the
+// zero bit (done at the start of the bit ending at A). The interrupt handler
+// called because of the wrap at edge A programs CC and TOP for the one bit
+// that will start at edge B. Because of the double-buffering in CC and TOP,
+// those values are not used until edge B.
+//
+// At edge B, the PWM's CC and TOP registers start using the values set at
+// edge A. The handler called because of the wrap at edge B programs CC and
+// TOP for the one bit starting at edge C.
+
 
 DccBitstream::DccBitstream(int sig_gpio, int pwr_gpio) :
     _pwr_gpio(pwr_gpio),

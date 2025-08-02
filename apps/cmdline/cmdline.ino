@@ -60,10 +60,20 @@ static void print_help(bool verbose, const char *help_short,
 static void print_help(bool verbose, const char *help_short, const char *help_long);
 static void tab_over(int num_tokens, int to_column=12);
 
-// DCC interface.
+// DCC interface
 
+#if 1
+// desktop train
+static const int dcc_sig_gpio = 27;
+static const int dcc_pwr_gpio = 28;
+static const int dcc_slp_gpio = 22;
+#else
+// breadboard
 static const int dcc_sig_gpio = 17;
 static const int dcc_pwr_gpio = 16;
+static const int dcc_slp_gpio = -1;
+#endif
+
 static const int dcc_adc_gpio = 26; // GPIO 26 is ADC 0
 
 static DccAdc adc(dcc_adc_gpio);
@@ -103,6 +113,12 @@ void setup()
     tokens.reset();
 
     throttle = command.create_throttle(); // default address 3
+
+    if (dcc_slp_gpio >= 0) {
+        gpio_init(dcc_slp_gpio);
+        gpio_put(dcc_slp_gpio, 1);
+        gpio_set_dir(dcc_slp_gpio, GPIO_OUT);
+    }
 
     stream.printf("\n");
     cmd_help(true);

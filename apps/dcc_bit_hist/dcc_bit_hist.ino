@@ -1,7 +1,7 @@
 #include <Arduino.h>
-
 #include "sys_led.h"
 #include "edges.h"
+#include "dcc_config.h"
 
 // Record histogram of DCC intervals
 
@@ -22,8 +22,6 @@
 //  25 tick/usec    0.04 usec/tick
 //  50 tick/usec    0.02 usec/tick
 static const int tpu = 50;
-
-static const int dcc_gpio = 7;
 
 // Histogram bin index is ticks (_tk)
 static const int hist_max_us = 200;                 // last bin, usec
@@ -87,7 +85,7 @@ void setup()
     Serial.printf("DCC Bit Histogram\n");
     Serial.printf("\n");
 
-    Edges::setup(dcc_gpio, pio_tick_hz);
+    Edges::setup(dcc_sig_gpio, pio_tick_hz);
 }
 
 

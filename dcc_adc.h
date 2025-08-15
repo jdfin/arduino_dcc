@@ -37,7 +37,7 @@ class DccAdc
 
         int _gpio;
         
-        uint16_t avg_raw(uint cnt) const;
+        uint16_t avg_raw(int cnt) const;
         uint16_t short_raw() const;
         uint16_t long_raw() const;
 
@@ -45,22 +45,22 @@ class DccAdc
         static uint16_t mv_to_ma(uint16_t mv);
 
         static const uint32_t clock_rate = 48000000;
-        static const uint32_t sample_rate = 10000; // 100 usec
+        static const uint32_t sample_rate = 10000; // 10 KHz = 100 usec per sample
 
-        static const uint avg_max = sample_rate / 60; // 1 cycle of 60 Hz noise
+        static const int avg_max = sample_rate / 60; // 1 cycle of 60 Hz noise
         uint16_t _avg[avg_max];
-        uint _avg_idx;
+        int _avg_idx;
 
-        static const uint short_cnt = 16;
+        static const int short_cnt = 16;
 
-        static const uint long_cnt = avg_max;
+        static const int long_cnt = avg_max;
 
-        uint _err_cnt;
+        int _err_cnt;
 
 #ifdef INCLUDE_LOG
-        static const uint log_max = sample_rate; // 1 sec
+        static const int log_max = 1 * sample_rate; // 1 sec
         uint16_t _log[log_max];
-        uint _log_idx;
+        int _log_idx;
 #endif
 
 }; // class DccAdc

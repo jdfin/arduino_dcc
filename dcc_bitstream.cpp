@@ -3,9 +3,9 @@
 #include "hardware/pwm.h"
 #include "dbg_gpio.h"
 #include "pwm_irq_mux.h"
-
 #include "dcc_pkt.h"
 #include "dcc_bitstream.h"
+
 
 // PWM usage:
 //
@@ -85,10 +85,10 @@ void DccBitstream::start_svc()
 }
 
 
-void DccBitstream::start(uint preamble_bits, DccPkt& first)
+void DccBitstream::start(int preamble_bits, DccPkt& first)
 {
-    uint sys_hz = clock_get_hz(clk_sys);
-    const uint pwm_hz = 1000000; // 1 MHz; 1 usec/count
+    uint32_t sys_hz = clock_get_hz(clk_sys);
+    const uint32_t pwm_hz = 1000000; // 1 MHz; 1 usec/count
     uint32_t pwm_div = sys_hz / pwm_hz;
 
     // If this is a start after a previous stop, the pwm is not disabled,

@@ -2,9 +2,9 @@
 
 #include <Arduino.h>
 #include <list>
-
 #include "dcc_adc.h"
 #include "dcc_bitstream.h"
+#include "dcc_cv.h"
 
 #undef INCLUDE_ACK_DBG
 
@@ -22,9 +22,10 @@ class DccCommand
 
         void mode_off();
         void mode_ops();
-        void mode_svc_write_cv(uint cv_num, uint8_t cv_val);
-        void mode_svc_write_bit(uint cv_num, uint bit_num, uint bit_val);
-        void mode_svc_read_cv(uint cv_num);
+        void mode_svc_write_cv(int cv_num, uint8_t cv_val);
+        void mode_svc_write_bit(int cv_num, int bit_num, int bit_val);
+        void mode_svc_read_cv(int cv_num);
+        void mode_svc_read_bit(int cv_num, int bit_num);
 
         enum Mode {
             MODE_OFF,
@@ -70,19 +71,23 @@ class DccCommand
         uint16_t _ack_dbg_ma[9]; // 0..7 are bits, 8 is byte
 #endif
 
-        uint _reset1_cnt;
-        uint _reset2_cnt;
+        int _reset1_cnt;
+        int _reset2_cnt;
 
         // for MODE_SVC_WRITE_CV
         DccPktSvcWriteCv _pkt_svc_write_cv;
-        uint _write_cnt;
+        int _write_cnt;
+        DccPktSvcWriteBit _pkt_svc_write_bit;
+        int _write_bit_cnt;
         void loop_svc_write();
 
         // for MODE_SVC_READ_CV
         DccPktSvcVerifyBit _pkt_svc_verify_bit;
         DccPktSvcVerifyCv _pkt_svc_verify_cv;
-        uint _verify_bit;
-        uint _verify_cnt;
+        int _verify_bit;
+        int _verify_bit_val; // 0 or 1
+        int _verify_cnt;
+        int _read_bit; // -1 when doing a byte read, or 0..7 when doing a bit read
         uint8_t _cv_val;
         void loop_svc_read();
 };

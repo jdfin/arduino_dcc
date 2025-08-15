@@ -1,7 +1,5 @@
-
 #include <Arduino.h>
 #include "xassert.h"
-
 #include "dcc_pkt.h"
 #include "dcc_throttle.h"
 
@@ -15,7 +13,9 @@ DccThrottle::DccThrottle() :
     _pkt_func_21(),
     _seq(0),
     _pkt_write_cv(),
-    _write_cv_cnt(0)
+    _write_cv_cnt(0),
+    _pkt_write_bit(),
+    _write_bit_cnt(0)
 {
 }
 
@@ -25,7 +25,7 @@ DccThrottle::~DccThrottle()
 }
 
 
-void DccThrottle::address(uint address)
+void DccThrottle::address(int address)
 {
     _pkt_speed.address(address);
     _pkt_func_0.address(address);
@@ -35,6 +35,7 @@ void DccThrottle::address(uint address)
     _pkt_func_21.address(address);
     _seq = 0;
     _pkt_write_cv.address(address);
+    _pkt_write_bit.address(address);
 }
 
 
@@ -45,7 +46,7 @@ void DccThrottle::speed(int speed)
 }
 
 
-void DccThrottle::function(uint num, bool on)
+void DccThrottle::function(int num, bool on)
 {
     xassert(DccPkt::function_min <= num && num <= DccPkt::function_max);
 
@@ -68,10 +69,17 @@ void DccThrottle::function(uint num, bool on)
 }
 
 
-void DccThrottle::write_cv(uint cv_num, uint8_t cv_val)
+void DccThrottle::write_cv(int cv_num, uint8_t cv_val)
 {
     _pkt_write_cv.cv(cv_num, cv_val);
     _write_cv_cnt = write_cv_send_cnt;
+}
+
+
+void DccThrottle::write_bit(int cv_num, int bit_num, int bit_val)
+{
+    _pkt_write_bit.cv_bit(cv_num, bit_num, bit_val);
+    _write_bit_cnt = write_bit_send_cnt;
 }
 
 
@@ -82,14 +90,19 @@ void DccThrottle::write_cv(uint cv_num, uint8_t cv_val)
 // 8. Speed     9. F21-F28
 DccPkt DccThrottle::next_packet()
 {
-    xassert(/* 0 <= _seq && */ _seq < seq_max);
+    xassert(0 <= _seq && _seq < seq_max);
 
     if (_write_cv_cnt > 0) {
         _write_cv_cnt--;
         return _pkt_write_cv;
     }
 
-    uint seq = _seq;
+    if (_write_bit_cnt > 0) {
+        _write_bit_cnt--;
+        return _pkt_write_bit;
+    }
+
+    int seq = _seq;
 
     if (++_seq >= seq_max)
         _seq = 0;

@@ -1,10 +1,7 @@
 #include <Arduino.h>
-
 #include "sys_led.h"
 #include "xassert.h"
-
 #include "edges.h"
-
 #include "dcc_config.h"
 #include "dcc_bit.h"
 #include "dcc_pkt.h"
@@ -36,10 +33,10 @@ void setup()
     SysLed::off();
 
     Serial.printf("\n");
-    Serial.printf("DCC Spy on GPIO %d\n", dcc_signal_gpio);
+    Serial.printf("DCC Spy on GPIO %d\n", dcc_sig_gpio);
     Serial.printf("\n");
 
-    Edges::setup(dcc_signal_gpio, pio_tick_hz);
+    Edges::setup(dcc_sig_gpio, pio_tick_hz);
 
     dcc.on_pkt_recv(&pkt_recv);
 

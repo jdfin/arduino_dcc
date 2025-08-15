@@ -49,15 +49,15 @@ class DccBitstream
         DccPkt *_current;   // never nullptr
         DccPkt *_next;      // _pkt_idle if nothing to send
 
-        uint _preamble_bits;
+        int _preamble_bits;
 
-        uint _slice;
-        uint _channel;
+        uint _slice;    // uint to match pico-sdk
+        uint _channel;  // uint to match pico-sdk
 
         int _byte; // -1 for preamble, then index in _current
         int _bit;  // counts down bit in preamble or _byte
 
-        void start(uint preamble_bits, DccPkt& first);
+        void start(int preamble_bits, DccPkt& first);
 
         inline void prog_bit(int b)
         {
@@ -66,7 +66,7 @@ class DccBitstream
             // Set wrap to bit_us-1 and level to bit_us/2.
             // E.g. for square wave with period 4 us, wrap=3 and level=2.
 
-            uint half_us = (b == 0 ? 100 : 58); // half-bit times
+            int half_us = (b == 0 ? 100 : 58); // half-bit times
             pwm_set_wrap(_slice, 2 * half_us - 1);
             pwm_set_chan_level(_slice, _channel, half_us);
         }

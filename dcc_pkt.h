@@ -25,15 +25,17 @@ class DccPkt
 
         uint8_t data(int idx) const;
 
-        static const uint address_invalid = UINT_MAX;
-        uint address() const;
-        virtual uint address(uint adrs);
-        uint address_size() const;
+        static const int address_invalid = INT_MAX;
+        int address() const;
+        virtual int address(int adrs);
+        int address_size() const;
 
         void set_xor();
 
-        static const int address_min = 1; // 0 is broadcast
-        static const int address_max = 10239; // 0x27ff
+        static const int address_min = 1;           // 0 is broadcast
+        static const int address_short_max = 127;   // 0x7f
+        static const int address_max = 10239;       // 0x27ff
+        static const int address_inv = INT_MAX;
 
         static const int speed_min = -127;
         static const int speed_max = 127;
@@ -92,12 +94,12 @@ class DccPktReset : public DccPkt
 class DccPktSpeed128 : public DccPkt
 {
     public:
-        DccPktSpeed128(uint adrs=3, int speed=0);
-        virtual uint address(uint adrs);
+        DccPktSpeed128(int adrs=3, int speed=0);
+        virtual int address(int adrs) override;
         int speed() const;
         void speed(int speed);
     private:
-        void refresh(uint adrs, int speed);
+        void refresh(int adrs, int speed);
         static uint8_t int_to_dcc(int speed_int);
         static int dcc_to_int(uint8_t speed_dcc);
 };
@@ -107,12 +109,14 @@ class DccPktSpeed128 : public DccPkt
 class DccPktFunc0 : public DccPkt
 {
     public:
-        DccPktFunc0(uint adrs=3);
-        virtual uint address(uint adrs);
-        bool f(uint num) const;
-        void f(uint num, bool on);
+        DccPktFunc0(int adrs=3);
+        virtual int address(int adrs) override;
+        bool f(int num) const;
+        void f(int num, bool on);
     private:
-        void refresh(uint adrs, uint8_t funcs=0);
+        static const int f_min = 0;
+        static const int f_max = 4;
+        void refresh(int adrs, uint8_t funcs=0);
         uint8_t funcs() const;
 };
 
@@ -121,12 +125,14 @@ class DccPktFunc0 : public DccPkt
 class DccPktFunc5 : public DccPkt
 {
     public:
-        DccPktFunc5(uint adrs=3);
-        virtual uint address(uint adrs);
-        bool f(uint num) const;
-        void f(uint num, bool on);
+        DccPktFunc5(int adrs=3);
+        virtual int address(int adrs) override;
+        bool f(int num) const;
+        void f(int num, bool on);
     private:
-        void refresh(uint adrs, uint8_t funcs=0);
+        static const int f_min = 5;
+        static const int f_max = 8;
+        void refresh(int adrs, uint8_t funcs=0);
         uint8_t funcs() const;
 };
 
@@ -135,12 +141,14 @@ class DccPktFunc5 : public DccPkt
 class DccPktFunc9 : public DccPkt
 {
     public:
-        DccPktFunc9(uint adrs=3);
-        virtual uint address(uint adrs);
-        bool f(uint num) const;
-        void f(uint num, bool on);
+        DccPktFunc9(int adrs=3);
+        virtual int address(int adrs) override;
+        bool f(int num) const;
+        void f(int num, bool on);
     private:
-        void refresh(uint adrs, uint8_t funcs=0);
+        static const int f_min = 9;
+        static const int f_max = 12;
+        void refresh(int adrs, uint8_t funcs=0);
         uint8_t funcs() const;
 };
 
@@ -149,12 +157,14 @@ class DccPktFunc9 : public DccPkt
 class DccPktFunc13 : public DccPkt
 {
     public:
-        DccPktFunc13(uint adrs=3);
-        virtual uint address(uint adrs);
-        bool f(uint num) const;
-        void f(uint num, bool on);
+        DccPktFunc13(int adrs=3);
+        virtual int address(int adrs) override;
+        bool f(int num) const;
+        void f(int num, bool on);
     private:
-        void refresh(uint adrs, uint8_t funcs=0);
+        static const int f_min = 13;
+        static const int f_max = 20;
+        void refresh(int adrs, uint8_t funcs=0);
         uint8_t funcs() const;
 };
 
@@ -163,12 +173,14 @@ class DccPktFunc13 : public DccPkt
 class DccPktFunc21 : public DccPkt
 {
     public:
-        DccPktFunc21(uint adrs=3);
-        virtual uint address(uint adrs);
-        bool f(uint num) const;
-        void f(uint num, bool on);
+        DccPktFunc21(int adrs=3);
+        virtual int address(int adrs) override;
+        bool f(int num) const;
+        void f(int num, bool on);
     private:
-        void refresh(uint adrs, uint8_t funcs=0);
+        static const int f_min = 21;
+        static const int f_max = 28;
+        void refresh(int adrs, uint8_t funcs=0);
         uint8_t funcs() const;
 };
 
@@ -177,12 +189,12 @@ class DccPktFunc21 : public DccPkt
 class DccPktOpsWriteCv : public DccPkt
 {
     public:
-        DccPktOpsWriteCv(uint adrs=3, uint cv_num=1, uint8_t cv_val=0);
-        virtual uint address(uint adrs);
-        void cv(uint cv_num, uint8_t cv_val); // set in message
+        DccPktOpsWriteCv(int adrs=3, int cv_num=1, uint8_t cv_val=0);
+        virtual int address(int adrs) override;
+        void cv(int cv_num, uint8_t cv_val); // set in message
     private:
-        void refresh(uint adrs, uint cv_num, uint8_t cv_val);
-        uint cv_num() const; // get from message
+        void refresh(int adrs, int cv_num, uint8_t cv_val);
+        int cv_num() const; // get from message
         uint8_t cv_val() const; // get from message
 };
 
@@ -191,14 +203,15 @@ class DccPktOpsWriteCv : public DccPkt
 class DccPktOpsWriteBit : public DccPkt
 {
     public:
-        DccPktOpsWriteBit(uint adrs, uint cv_num, uint bit_num, uint bit_val);
-        virtual uint address(uint adrs);
-        void cv_bit(uint cv_num, uint bit_num, uint bit_val);
+        DccPktOpsWriteBit();
+        DccPktOpsWriteBit(int adrs, int cv_num, int bit_num, int bit_val);
+        virtual int address(int adrs) override;
+        void cv_bit(int cv_num, int bit_num, int bit_val);
     private:
-        void refresh(uint adrs, uint cv_num, uint bit_num, uint bit_val);
-        uint cv_num() const;
-        uint bit_num() const;
-        uint bit_val() const;
+        void refresh(int adrs, int cv_num, int bit_num, int bit_val);
+        int cv_num() const;
+        int bit_num() const;
+        int bit_val() const;
 };
 
 
@@ -206,8 +219,8 @@ class DccPktOpsWriteBit : public DccPkt
 class DccPktSvcWriteCv : public DccPkt
 {
     public:
-        DccPktSvcWriteCv(uint cv_num=1, uint8_t cv_val=0);
-        void set_cv(uint cv_num, uint8_t cv_val);
+        DccPktSvcWriteCv(int cv_num=1, uint8_t cv_val=0);
+        void set_cv(int cv_num, uint8_t cv_val);
 };
 
 
@@ -215,8 +228,8 @@ class DccPktSvcWriteCv : public DccPkt
 class DccPktSvcWriteBit : public DccPkt
 {
     public:
-        DccPktSvcWriteBit(uint cv_num=1, uint bit_num=0, uint bit_val=0);
-        void set_cv_bit(uint cv_num, uint bit_num, uint bit_val);
+        DccPktSvcWriteBit(int cv_num=1, int bit_num=0, int bit_val=0);
+        void set_cv_bit(int cv_num, int bit_num, int bit_val);
 };
 
 
@@ -224,8 +237,8 @@ class DccPktSvcWriteBit : public DccPkt
 class DccPktSvcVerifyCv : public DccPkt
 {
     public:
-        DccPktSvcVerifyCv(uint cv_num=1, uint8_t cv_val=0);
-        void set_cv_num(uint cv_num);
+        DccPktSvcVerifyCv(int cv_num=1, uint8_t cv_val=0);
+        void set_cv_num(int cv_num);
         void set_cv_val(uint8_t cv_val);
 };
 
@@ -234,7 +247,7 @@ class DccPktSvcVerifyCv : public DccPkt
 class DccPktSvcVerifyBit : public DccPkt
 {
     public:
-        DccPktSvcVerifyBit(uint cv_num=1, uint bit_num=0, uint bit_val=0);
-        void set_cv_bit(uint cv_num, uint bit_num=0, uint bit_val=0);
-        void set_bit(uint bit_num, uint bit_val);
+        DccPktSvcVerifyBit(int cv_num=1, int bit_num=0, int bit_val=0);
+        void set_cv_bit(int cv_num, int bit_num=0, int bit_val=0);
+        void set_bit(int bit_num, int bit_val);
 };

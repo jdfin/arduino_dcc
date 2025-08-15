@@ -1,7 +1,5 @@
 #include <Arduino.h>
-
 #include "hardware/adc.h"
-
 #include "dcc_adc.h"
 
 
@@ -103,24 +101,24 @@ void DccAdc::log_show()
 {
 #ifdef INCLUDE_LOG
     Serial.printf("\n");
-    Serial.printf("adc log: %u entries\n", _log_idx);
+    Serial.printf("adc log: %d entries\n", _log_idx);
     Serial.printf("\n");
-    Serial.printf("err_cnt = %u\n", _err_cnt);
+    Serial.printf("err_cnt = %d\n", _err_cnt);
     Serial.printf("\n");
     Serial.printf(" idx  raw\n");
   //               ---- ----
-    for (uint i = 0; i < _log_idx; i++)
-        Serial.printf("%4u %4u\n", i, _log[i]);
+    for (int i = 0; i < _log_idx; i++)
+        Serial.printf("%4d %4u\n", i, _log[i]);
     Serial.printf("\n");
 #endif
 }
 
 
-uint16_t DccAdc::avg_raw(uint cnt) const
+uint16_t DccAdc::avg_raw(int cnt) const
 {
     uint32_t sum = 0;
     int i = _avg_idx;
-    for (uint j = 0; j < cnt; j++) {
+    for (int j = 0; j < cnt; j++) {
         i--;
         if (i < 0)
             i = avg_max - 1;

@@ -1,8 +1,8 @@
 #include <Arduino.h>
-
 #include "sys_led.h"
 #include "xassert.h"
 #include "edges.h"
+#include "dcc_config.h"
 
 // Record intervals between edges on a gpio
 
@@ -16,8 +16,6 @@
 
 // Measurement resolution, ticks/microsecond.
 static const int tpu = 50;
-
-static const int dcc_gpio = 7;
 
 static const int interval_end_ct = 1024; // total intervals to record
 static const int line_ct = 8; // print this many per line
@@ -41,12 +39,12 @@ void setup()
     SysLed::off();
 
     Serial.printf("\n");
-    Serial.printf("Recording Edges on GPIO %d\n", dcc_gpio);
+    Serial.printf("Recording Edges on GPIO %d\n", dcc_sig_gpio);
     Serial.printf("\n");
     Serial.printf("Tick rate %u MHz\n", tpu);
     Serial.printf("\n");
 
-    Edges::setup(dcc_gpio, pio_tick_hz);
+    Edges::setup(dcc_sig_gpio, pio_tick_hz);
 }
 
 

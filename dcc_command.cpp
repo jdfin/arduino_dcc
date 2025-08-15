@@ -1,10 +1,6 @@
 #include <Arduino.h>
 #include <list>
-
-#include "hardware/adc.h"
-
 #include "xassert.h"
-
 #include "dcc_adc.h"
 #include "dcc_throttle.h"
 #include "dcc_command.h"
@@ -22,10 +18,14 @@ DccCommand::DccCommand(int sig_gpio, int pwr_gpio, DccAdc& adc) :
     _reset2_cnt(0),
     _pkt_svc_write_cv(),
     _write_cnt(0),
+    _pkt_svc_write_bit(),
+    _write_bit_cnt(0),
     _pkt_svc_verify_bit(),
     _pkt_svc_verify_cv(),
     _verify_bit(0),
+    _verify_bit_val(1),
     _verify_cnt(0),
+    _read_bit(-1),
     _cv_val(0)
 {
 }
@@ -56,7 +56,7 @@ void DccCommand::mode_ops()
 }
 
 
-void DccCommand::mode_svc_write_cv(uint cv_num, uint8_t cv_val)
+void DccCommand::mode_svc_write_cv(int cv_num, uint8_t cv_val)
 {
     _mode = MODE_SVC_WRITE_CV;
 
@@ -73,13 +73,24 @@ void DccCommand::mode_svc_write_cv(uint cv_num, uint8_t cv_val)
 }
 
 
-void DccCommand::mode_svc_write_bit(uint cv_num, uint bit_num, uint bit_val)
+void DccCommand::mode_svc_write_bit(int cv_num, int bit_num, int bit_val)
 {
-    // XXX
+    _mode = MODE_SVC_WRITE_CV;
+
+    _svc_status = -1; // "not done"
+
+    _reset1_cnt = 20;
+    _write_bit_cnt = 5;
+    _reset2_cnt = 5;
+    _pkt_svc_write_bit.set_cv_bit(cv_num, bit_num, bit_val);
+
+    _adc.start();
+
+    _bitstream.start_svc();
 }
 
 
-void DccCommand::mode_svc_read_cv(uint cv_num)
+void DccCommand::mode_svc_read_cv(int cv_num)
 {
     _mode = MODE_SVC_READ_CV;
 
@@ -87,8 +98,27 @@ void DccCommand::mode_svc_read_cv(uint cv_num)
 
     _reset1_cnt = 20;
     _cv_val = 0;
+    _read_bit = -1;
+    _verify_bit_val = 1;
     _pkt_svc_verify_bit.set_cv_bit(cv_num);
     _pkt_svc_verify_cv.set_cv_num(cv_num);
+
+    _adc.start();
+
+    _bitstream.start_svc();
+}
+
+
+void DccCommand::mode_svc_read_bit(int cv_num, int bit_num)
+{
+    _mode = MODE_SVC_READ_CV;
+
+    _svc_status = -1; // "not done"
+
+    _reset1_cnt = 20;
+    _read_bit = bit_num;
+    _verify_bit_val = 0; // 0 then 1
+    _pkt_svc_verify_bit.set_cv_bit(cv_num);
 
     _adc.start();
 
@@ -171,14 +201,22 @@ void DccCommand::loop_svc_write()
             // Ack! Don't send any more packets, and power off.
 #ifndef INCLUDE_ADC_LOG
             _write_cnt = 0;
+            _write_bit_cnt = 0;
             _reset2_cnt = 0;
 #endif
             _svc_status = 1;
         }
         if (_write_cnt > 0) {
+            xassert(_write_bit_cnt == 0);
             if (_bitstream.need_packet()) {
                 _bitstream.send_packet(_pkt_svc_write_cv);
                 _write_cnt--;
+            }
+        } else if (_write_bit_cnt > 0) {
+            xassert(_write_cnt == 0);
+            if (_bitstream.need_packet()) {
+                _bitstream.send_packet(_pkt_svc_write_bit);
+                _write_bit_cnt--;
             }
         } else if (_reset2_cnt > 0) {
             if (_bitstream.need_packet()) {
@@ -225,12 +263,16 @@ void DccCommand::loop_svc_read()
             _bitstream.send_reset();
             _reset1_cnt--;
             if (_reset1_cnt == 0) {
+                // Done with resets.
                 // Use the long average adc reading as the baseline for
                 // detecting an ack pulse.
                 _ack_ma = _adc.long_ma() + ack_inc_ma;
                 //Serial.printf("long_ma = %u, ack_ma = %u\n", long_ma, _ack_ma);
-                _verify_bit = 7;
-                _pkt_svc_verify_bit.set_bit(_verify_bit, 1);
+                if (0 <= _read_bit && _read_bit < 8)
+                    _verify_bit = _read_bit; // just the one bit
+                else
+                    _verify_bit = 7; // 7...0
+                _pkt_svc_verify_bit.set_bit(_verify_bit, _verify_bit_val);
                 _verify_cnt = 5;
 #ifdef INCLUDE_ACK_DBG
                 _ack_dbg_ma[_verify_bit] = _ack_ma;
@@ -243,8 +285,10 @@ void DccCommand::loop_svc_read()
     uint16_t short_ma = _adc.short_ma();
     if (short_ma >= _ack_ma) {
         // Ack!
-        if (_verify_bit == 8) {
-            // This is the ack for the byte-verify at the end
+        if (0 <= _read_bit && _read_bit < 8) {
+            // Could be checking for 0 or for 1
+            _cv_val = _verify_bit_val;
+            // Either way we're done
             _svc_status = 1;
             // If logging adc (for analysis), we keep going to see the
             // full ack. If not logging, we're done.
@@ -253,8 +297,19 @@ void DccCommand::loop_svc_read()
                 _reset2_cnt = 0;
             }
         } else {
-            // This is an ack for a bit-verify
-            _cv_val |= (1 << _verify_bit);
+            if (_verify_bit == 8) {
+                // This is the ack for the byte-verify at the end
+                _svc_status = 1;
+                // If logging adc (for analysis), we keep going to see the
+                // full ack. If not logging, we're done.
+                if constexpr (!_adc.logging()) {
+                    _verify_cnt = 0;
+                    _reset2_cnt = 0;
+                }
+            } else {
+                // This is an ack for a bit-verify
+                _cv_val |= (1 << _verify_bit);
+            }
         }
     }
 
@@ -288,27 +343,48 @@ void DccCommand::loop_svc_read()
     } else {
 
         // done with 5 verifies and 5 resets for _verify_bit
-        if (_verify_bit == 8) {
-            // byte verify done
-            if (_svc_status == -1)
-                _svc_status = 0; // failed, timeout
-            mode_off();
-        } else if (_verify_bit > 0) {
-            _verify_bit--;
-            _pkt_svc_verify_bit.set_bit(_verify_bit, 1);
-            _verify_cnt = 5;
+        if (_verify_bit == _read_bit) {
+
+            // bit read
+            if (_verify_bit_val == 0) {
+                _verify_bit_val = 1;
+                _pkt_svc_verify_bit.set_bit(_verify_bit, _verify_bit_val);
+                _verify_cnt = 5;
+            } else {
+                // tried 0, then 1; hopefully got an ack for one of them
+                if (_svc_status == -1)
+                    _svc_status = 0; // didn't get an ack for either
+                mode_off();
+            }
+
+        } else {
+
+            // byte read
+            if (_verify_bit == 8) {
+                // byte verify done
+                if (_svc_status == -1)
+                    _svc_status = 0; // failed, timeout
+                mode_off();
+            } else if (_verify_bit > 0) {
+                xassert(_verify_bit_val == 1);
+                _verify_bit--;
+                _pkt_svc_verify_bit.set_bit(_verify_bit, 1);
+                _verify_cnt = 5;
 #ifdef INCLUDE_ACK_DBG
-            _ack_dbg_ma[_verify_bit] = _ack_ma;
+                _ack_dbg_ma[_verify_bit] = _ack_ma;
 #endif
-        } else { // (_verify_bit == 0)
-            // start byte verify
-            _verify_bit = 8; // signifies verify byte
-            _pkt_svc_verify_cv.set_cv_val(_cv_val);
-            _verify_cnt = 5;
+            } else {
+                xassert(_verify_bit == 0);
+                // start byte verify
+                _verify_bit = 8; // signifies verify byte
+                _pkt_svc_verify_cv.set_cv_val(_cv_val);
+                _verify_cnt = 5;
 #ifdef INCLUDE_ACK_DBG
-            _ack_dbg_ma[_verify_bit] = _ack_ma;
+                _ack_dbg_ma[_verify_bit] = _ack_ma;
 #endif
-        }
+            }
+
+        } // bit read or byte read
     }
 
 } // void DccCommand::loop_svc_read

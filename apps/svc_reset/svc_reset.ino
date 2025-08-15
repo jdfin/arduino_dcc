@@ -1,20 +1,14 @@
 #include <Arduino.h>
-
 #include "xassert.h"
 #include "sys_led.h"
-
+#include "dcc_config.h"
 #include "dcc_adc.h"
 #include "dcc_throttle.h"
 #include "dcc_command.h"
+#include "dcc_cv.h"
 
-
-static const int sig_gpio = 17;
-static const int pwr_gpio = 16;
-static const int adc_gpio = 26; // ADC0
-
-static DccAdc adc(adc_gpio);
-
-static DccCommand command(sig_gpio, pwr_gpio, adc);
+static DccAdc adc(dcc_adc_gpio);
+static DccCommand command(dcc_sig_gpio, dcc_pwr_gpio, adc);
 
 
 void setup()
@@ -35,7 +29,7 @@ void setup()
 
     adc.log_reset();
 
-    command.mode_svc_write_cv(8, 0x08);
+    command.mode_svc_write_cv(DccCv::mfg_id, 0x08);
 }
 
 

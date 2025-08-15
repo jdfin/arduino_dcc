@@ -1,5 +1,4 @@
 #include <Arduino.h>
-
 #include "xassert.h"
 #include "dcc_bit.h"
 

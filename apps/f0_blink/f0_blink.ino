@@ -1,17 +1,13 @@
 #include <Arduino.h>
-
 #include "xassert.h"
 #include "sys_led.h"
-
+#include "dcc_config.h"
 #include "dcc_throttle.h"
 #include "dcc_command.h"
-
-
-static const int sig_gpio = 17;
-static const int pwr_gpio = 16;
+#include "dcc_function.h"
 
 static DccAdc adc(-1);
-static DccCommand command(sig_gpio, pwr_gpio, adc);
+static DccCommand command(dcc_sig_gpio, dcc_pwr_gpio, adc);
 static DccThrottle *throttle = nullptr;
 
 
@@ -59,5 +55,5 @@ void loop()
 
     f0 = !f0;
 
-    throttle->function(0, f0);
+    throttle->function(DccFunction::headlight, f0);
 }
